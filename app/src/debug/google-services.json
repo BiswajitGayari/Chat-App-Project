@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "958273427742",
+    "firebase_url": "https://textmeapp-ba431-default-rtdb.firebaseio.com",
+    "project_id": "textmeapp-ba431",
+    "storage_bucket": "textmeapp-ba431.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:958273427742:android:147563ff77a1722414910f",
+        "android_client_info": {
+          "package_name": "com.application.chat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBYRmYn4AZNUA1OeFDI-m1ecS_N0lyF5ec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
