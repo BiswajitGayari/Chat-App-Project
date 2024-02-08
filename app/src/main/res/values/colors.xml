@@ -18,4 +18,6 @@
     <color name="violet">#674ea7</color>
     <color name="lightgreen">#10beac</color>
     <color name="textcolor">#000000</color>
+    <color name="selectedItemColor">#d5a6bd</color>
+    <color name="menuBar">#d9d2e9</color>
 </resources>

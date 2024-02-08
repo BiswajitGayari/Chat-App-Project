@@ -3,6 +3,7 @@ package com.application.chat;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
@@ -11,10 +12,13 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,7 +26,9 @@ import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.view.ActionMode;
 import androidx.appcompat.widget.AppCompatButton;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -31,11 +37,11 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.application.chat.Adapters.UserAdapter;
-import com.application.chat.CacheDb.DatabaseChatListHelper;
 import com.application.chat.Models.Friend;
 import com.application.chat.Models.Message;
 import com.application.chat.Models.User;
 import com.bumptech.glide.Glide;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
@@ -46,10 +52,12 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -64,32 +72,38 @@ public class UserActivity extends AppCompatActivity{
     List<User> userList;
     UserAdapter userAdapter;
     DatabaseReference userRef;
-    DatabaseChatListHelper cache;
-    Cursor cursor;
     TextInputEditText searchDataInput;
     DatabaseReference chatRef;
     BroadcastReceiver broadcastReceiver;
     ExecutorService exe;
     String sender;
     boolean checkBroadCast=false;
+    DatabaseReference friendRef;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_user);
-        this.userRef= FirebaseDatabase.getInstance().getReference("Users");
-        this.cache=DatabaseChatListHelper.getInstance(getApplicationContext());
         this.fUser =FirebaseAuth.getInstance().getCurrentUser();
+        this.userRef= FirebaseDatabase.getInstance().getReference("Users");
+        friendRef=FirebaseDatabase.getInstance().getReference("Friends").child(fUser.getUid());
         this.exe=Executors.newFixedThreadPool(2);
         updateToken();
-        this.userList=new ArrayList<>();
         this.searchDataInput=findViewById(R.id.searchItems);
         this.recyclerView=findViewById(R.id.recyclerList);
         LinearLayoutManager layout=new LinearLayoutManager(getApplicationContext());
         recyclerView.setLayoutManager(layout);
-        userAdapter=new UserAdapter(userList,this);
-        recyclerView.setAdapter(userAdapter);
-        loadChatList();
+        pushStatus();
+        runOnUiThread(()->loadChatList());
+        findViewById(R.id.backBtn).setOnClickListener(l->{
+            userAdapter.clearSelection();
+            userAdapter.setLongPress(false);
+            menuBarVisibility(false);
+        });
+        findViewById(R.id.deleteBtn).setOnClickListener(l->{
+            sureDialog();
+        });
+        findViewById(R.id.favBtn).setOnClickListener(f->{});
         loadDrawer();
         chatRef=FirebaseDatabase.getInstance().getReference("Chats");
         ImageView menu_button=findViewById(R.id.menu_btn);
@@ -100,7 +114,6 @@ public class UserActivity extends AppCompatActivity{
                 drawerLayout.openDrawer(GravityCompat.START);
             }
         });
-        pushStatus();
         searchDataInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -113,7 +126,7 @@ public class UserActivity extends AppCompatActivity{
                 if(squenceLengh!=0) {
                     filterTheSearchedItem(charSequence.toString());
                 }else{
-                    userAdapter.notifyDataSetChanged();
+                    userAdapter.updateList(userList);
                 }
             }
 
@@ -164,41 +177,94 @@ public class UserActivity extends AppCompatActivity{
             public void onCancelled(@NonNull DatabaseError error) {
             }
         });
-
-        chatRef.addChildEventListener(new ChildEventListener() {
+        friendRef.addValueEventListener(new ValueEventListener() {
             @Override
-            public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
-                Message message =snapshot.getValue(Message.class);
-                String senderId= message.getSender();
-                if(message !=null && message.getReciver()!=null && senderId!=null && !message.isSeen()){
-                    if(message.getReciver().equals(fUser.getUid()) && checkUser(senderId)){
-                        int pos=getPositionById(senderId);
-                        updateMessageIndicator(pos);
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if(snapshot.hasChildren()){
+                    for(DataSnapshot data:snapshot.getChildren()){
+                        if(data.hasChild("messageCount")){
+                            int count=data.child("messageCount").getValue(Integer.class);
+                            int pos=getPositionById(data.child("friendId").getValue(String.class));
+                            updateMessageIndicator(pos,count);
+                        }
                     }
                 }
             }
-            @Override
-            public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
-
-            }
-
-            @Override
-            public void onChildRemoved(@NonNull DataSnapshot snapshot) {
-
-            }
-
-            @Override
-            public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
-
-            }
-
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
 
             }
         });
     }
-
+    public void menuBarVisibility(boolean show){
+        RelativeLayout toolbar=findViewById(R.id.relativeLayout1);
+        RelativeLayout menuBar=findViewById(R.id.menuBar);
+        RelativeLayout.LayoutParams params=(RelativeLayout.LayoutParams) recyclerView.getLayoutParams();
+        if(show){
+            params.addRule(RelativeLayout.BELOW,R.id.menuBar);
+            recyclerView.setLayoutParams(params);
+            toolbar.setVisibility(View.GONE);
+            menuBar.setVisibility(View.VISIBLE);
+        }else{
+            params.addRule(RelativeLayout.BELOW,R.id.relativeLayout1);
+            recyclerView.setLayoutParams(params);
+            menuBar.setVisibility(View.GONE);
+            toolbar.setVisibility(View.VISIBLE);
+        }
+    }
+    public void sureDialog(){
+        MaterialAlertDialogBuilder builder=new MaterialAlertDialogBuilder(this);
+        builder.setTitle("Do want to delete ?");
+        builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                deleteSelected();
+                menuBarVisibility(false);
+            }
+        });
+        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        AlertDialog dialog=builder.create();
+        dialog.show();
+    }
+    public void deleteSelected(){
+        List<Integer> items=userAdapter.getSelectedItems();
+        Collections.sort(items,Collections.reverseOrder());
+        for(int i:items){
+            if(i>=0 && i<userList.size()){
+                User user=userList.get(i);
+                userList.remove(i);
+                Query q=friendRef.orderByChild("friendId").equalTo(user.getId());
+                q.addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        for (DataSnapshot d:snapshot.getChildren()){
+                            friendRef.child(d.getKey()).removeValue().addOnCompleteListener(task -> {
+                                if (task.isSuccessful()) {
+                                    Toast.makeText(getApplicationContext(), "Successfully deleted", Toast.LENGTH_SHORT).show();
+                                }
+                                else {
+                                    Toast.makeText(getApplicationContext(), "Failed to delete", Toast.LENGTH_SHORT).show();
+                                    if(task.getException()!=null)
+                                        Log.e("deleteSelected()",task.getException().getMessage());
+                                }
+                            });
+                        }
+                    }
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        Log.e("deleteSelected()",error.getMessage());
+                    }
+                });
+            }
+        }
+        userAdapter.notifyDataSetChanged();
+        userAdapter.clearSelection();
+    }
     public void updateStatus(boolean isOnline,int pos){
         RecyclerView.ViewHolder viewHolder = recyclerView.findViewHolderForAdapterPosition(pos);
         if(viewHolder!=null){
@@ -213,19 +279,16 @@ public class UserActivity extends AppCompatActivity{
             userAdapter.notifyItemChanged(pos);
         }
     }
-    public void updateMessageIndicator(int pos){
+    public void updateMessageIndicator(int pos,int count){
         RecyclerView.ViewHolder viewHolder = recyclerView.findViewHolderForAdapterPosition(pos);
         if (viewHolder != null) {
             TextView indicator = viewHolder.itemView.findViewById(R.id.indicator);
-            if (indicator.getVisibility() == View.GONE) {
-                indicator.setText("1");
+            if(count>0){
+                indicator.setText(String.valueOf(count));
                 indicator.setVisibility(View.VISIBLE);
                 userAdapter.notifyItemChanged(pos);
-            }else {
-                String count = indicator.getText().toString();
-                int parsedCount = Integer.parseInt(count);
-                parsedCount++;
-                indicator.setText(String.valueOf(parsedCount));
+            }else{
+                indicator.setVisibility(View.GONE);
                 userAdapter.notifyItemChanged(pos);
             }
         }
@@ -263,20 +326,11 @@ public class UserActivity extends AppCompatActivity{
         return false;
     }
     public void loadChatList() {
-        /*cursor=cache.getAllUserId();
-        if(cursor!=null){
-            int columnIndex=cursor.getColumnIndex(cache.getColumnUserId());
-            if(columnIndex!=-1) {
-                while (cursor.moveToNext()) {
-                    String gotId = cursor.getString(columnIndex);
-                    queryAndAdd(gotId);
-                }
-            }
-        }*/
-        DatabaseReference friendsRef=FirebaseDatabase.getInstance().getReference("Friends");
-        friendsRef.child(fUser.getUid()).addValueEventListener(new ValueEventListener() {
+        userList=new ArrayList<>();
+        friendRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                userList.clear();
                 for (DataSnapshot data:snapshot.getChildren()){
                     Friend friend=data.getValue(Friend.class);
                     if(friend!=null && friend.getFriendId()!=null){
@@ -300,6 +354,7 @@ public class UserActivity extends AppCompatActivity{
         }
         return -1;
     }
+    Context c=this;
     public void queryAndAdd(String id){
         userRef.child(id).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -307,9 +362,11 @@ public class UserActivity extends AppCompatActivity{
                 User userInfo=snapshot.getValue(User.class);
                 if(userInfo!=null && !userInfo.getId().equals(fUser.getUid())){
                     userList.add(userInfo);
-                    userAdapter.notifyItemInserted(userList.size()-1);
-                    recyclerView.smoothScrollToPosition(userList.size()-1);
+                    //userAdapter.notifyItemInserted(userList.size()-1);
+                    //recyclerView.smoothScrollToPosition(userList.size()-1);
                 }
+                userAdapter=new UserAdapter(userList,c);
+                recyclerView.setAdapter(userAdapter);
             }
             @Override
             public void onCancelled(@NonNull DatabaseError error)  {

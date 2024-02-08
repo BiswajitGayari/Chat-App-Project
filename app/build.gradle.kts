@@ -1,9 +1,10 @@
 plugins {
     id("com.android.application")
     id("com.google.gms.google-services")
+    id("io.objectbox")
 }
 
-android {
+
     namespace = "com.application.chat"
     compileSdk = 34
 
@@ -11,20 +12,19 @@ android {
         applicationId = "com.application.chat"
         minSdk = 20
         targetSdk = 33
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 8
+        versionName = "1.7"
         multiDexEnabled=true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
-
     buildTypes {
-        release {
-            isMinifyEnabled = false
+        getByName("release"){
+            isMinifyEnabled=false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -56,4 +56,5 @@ dependencies{
     androidTestImplementation("androidx.test:runner:1.5.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     implementation("androidx.multidex:multidex:2.0.1")
+    implementation("io.objectbox:objectbox-android:3.7.1")
 }

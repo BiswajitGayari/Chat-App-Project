@@ -8,4 +8,7 @@
         android:id="@+id/setting"
         android:icon="@drawable/baseline_settings_24"
         android:title="@string/settings" />
+    <item
+        android:id="@+id/ringtone"
+        android:title="Message Sound"/>
 </menu>

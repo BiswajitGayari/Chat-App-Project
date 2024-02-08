@@ -31,25 +31,27 @@ public class FirebaseMessaging extends FirebaseMessagingService {
     public void onNewToken(@NonNull String token) {
         super.onNewToken(token);
         FirebaseUser fUser= FirebaseAuth.getInstance().getCurrentUser();
-        DatabaseReference userRef= FirebaseDatabase.getInstance().getReference("Users");
-        DatabaseReference tokenRef=userRef.child(fUser.getUid()).child("token");
-        tokenRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                String data=snapshot.getValue(String.class);
-                if(data==null){
-                    tokenRef.setValue(token);
-                    return;
-                }else if(data!=null && !data.equals(token)){
-                    tokenRef.setValue(token);
-                    return;
+        if(fUser!=null){
+            DatabaseReference userRef= FirebaseDatabase.getInstance().getReference("Users");
+            DatabaseReference tokenRef=userRef.child(fUser.getUid()).child("token");
+            tokenRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    String data=snapshot.getValue(String.class);
+                    if(data==null){
+                        tokenRef.setValue(token);
+                        return;
+                    }else if(data!=null && !data.equals(token)){
+                        tokenRef.setValue(token);
+                        return;
+                    }
                 }
-            }
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Log.e("Firebase","Token Database reference error");
-            }
-        });
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    Log.e("Firebase","Token Database reference error");
+                }
+            });
+        }
     }
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remotemessage) {

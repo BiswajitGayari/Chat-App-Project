@@ -2,7 +2,7 @@
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical"
     android:layout_centerVertical="true">
 
@@ -36,6 +36,9 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:src="@drawable/default_pic"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?selectableItemBackgroundBorderless"
             android:scaleType="centerCrop"/>
     </RelativeLayout>
 </RelativeLayout>

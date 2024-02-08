@@ -2,29 +2,30 @@ package com.application.chat.Adapters;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
+import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.widget.PopupMenu;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.application.chat.CacheDb.DatabaseChatListHelper;
 import com.application.chat.ConversationActivity;
 import com.application.chat.Models.User;
 import com.application.chat.R;
+import com.application.chat.UserActivity;
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.bumptech.glide.request.RequestOptions;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
@@ -33,11 +34,15 @@ import java.util.List;
 public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserHolder> {
     List<User> userInfoList;
     List<User> newFilterList;
+    private SparseBooleanArray selecteditems;
+    boolean isLongPress=false;
     Context context;
     public UserAdapter(List<User> userList, Context context) {
         this.userInfoList = userList;
         this.newFilterList = new ArrayList<>(userList);
-        this.context = context;
+        this.context = context;;
+        this.selecteditems=new SparseBooleanArray();
+
     }
     @Override
     public UserHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -58,23 +63,82 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserHolder> {
                         .centerCrop()
                         .error(R.drawable.default_pic)
                         .into(holder.profile);
+                holder.profile.setOnClickListener(v -> viewImage(user.getImage()));
             }
-            holder.itemView.setOnClickListener(c -> {
-                Intent i = new Intent(context, ConversationActivity.class);
-                i.putExtra("name", user.getName());
-                i.putExtra("image", user.getImage());
-                i.putExtra("token", user.getToken());
-                i.putExtra("uid", user.getId());
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(i);
+            holder.itemView.setOnClickListener(v-> {
+                if(isLongPress) {
+                    if(getItemCount()!=0)
+                       toggleSelect(position);
+                    else {
+                        UserActivity userActivity=(UserActivity) v.getContext();
+                        userActivity.menuBarVisibility(false);
+                    }
+                }
+                else {
+                    Intent i = new Intent(context, ConversationActivity.class);
+                    i.putExtra("name", user.getName());
+                    i.putExtra("image", user.getImage());
+                    i.putExtra("token", user.getToken());
+                    i.putExtra("uid", user.getId());
+                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    context.startActivity(i);
+                }
             });
         }
-        holder.profile.setOnClickListener(v -> viewImage(user.getImage()));
 
         holder.itemView.setOnLongClickListener(v -> {
-            buildPopup(v, user, position);
+            UserActivity userActivity=(UserActivity) v.getContext();
+            userActivity.menuBarVisibility(true);
+            isLongPress=true;
+            toggleSelect(position);
             return true;
         });
+        boolean isSelect= selecteditems.get(position,false);
+        holder.itemView.setActivated(isSelect);
+        int color=isSelect?ContextCompat.getColor(context,R.color.menuBar):getDefaultColor();
+        holder.itemView.setBackgroundColor(color);
+    }
+    public boolean isSelected(int pos){
+        return selecteditems.get(pos,false);
+    }
+
+    public void setLongPress(boolean longPress) {
+        isLongPress = longPress;
+    }
+
+    public int getDefaultColor(){
+        int color=0;
+        int currTheme=context.getResources().getConfiguration().
+                uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        if(currTheme==Configuration.UI_MODE_NIGHT_NO)
+            color=android.R.attr.colorPrimary;
+        if(currTheme==Configuration.UI_MODE_NIGHT_YES)
+            color=android.R.attr.colorPrimaryDark;
+        return  color;
+    }
+
+    public void toggleSelect(int pos){
+        if(selecteditems.get(pos)){
+            selecteditems.delete(pos);
+        }else {
+            selecteditems.put(pos,true);
+        }
+        notifyItemChanged(pos);
+    }
+    public void clearSelection(){
+        selecteditems.clear();
+        notifyDataSetChanged();
+    }
+    public int getSelectedCount(){
+        return selecteditems.size();
+    }
+    public List<Integer>getSelectedItems(){
+        List<Integer> items=new ArrayList<>();
+        for(int i=0;i<getItemCount();i++){
+            if(selecteditems.get(i))
+                items.add(i);
+        }
+        return items;
     }
     public int getPositionById(String target){
         for(int i=0;i<userInfoList.size();i++){
@@ -87,10 +151,13 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserHolder> {
     public void viewImage(String uri){
         View dialogView=LayoutInflater.from(context).inflate(R.layout.image_preview,null);
         ImageView imageView=dialogView.findViewById(R.id.profile_image);
+        imageView.setOnClickListener(v->{
+
+        });
         Glide.with(context).load(Uri.parse(uri))
-                .placeholder(R.drawable.default_pic)
                 .error(R.drawable.default_pic)
-                .into(imageView);
+                .placeholder(R.drawable.default_pic)
+                .centerCrop().into(imageView);
         MaterialAlertDialogBuilder builder=new MaterialAlertDialogBuilder(context,R.style.MaterialAlertDialog);
         builder.setView(dialogView);
         AlertDialog dialog=builder.create();
@@ -119,8 +186,6 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserHolder> {
                 if(menuId==R.id.fav) {
                     Toast.makeText(context, "Marked", Toast.LENGTH_SHORT).show();
                 } else if (menuId==R.id.delete) {
-                    DatabaseChatListHelper.getInstance(context)
-                            .delete(info.getId());
                     userInfoList.remove(pos);
                     notifyItemRemoved(pos);
                     notifyItemRangeChanged(pos,userInfoList.size());

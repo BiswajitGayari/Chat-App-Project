@@ -4,8 +4,9 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
-import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Patterns;
@@ -21,6 +22,7 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
 
+import com.application.chat.Dialogs.ProgressDialog;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -40,7 +42,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
-        setTheme(R.style.Base_Theme_Bingchat);
         this.auth=FirebaseAuth.getInstance();
         FirebaseUser user=auth.getCurrentUser();
         if (user!=null){
@@ -51,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
                 redirect(new ProfileDetailsActivity());
             }
         }
+        setTheme(R.style.Base_Theme_Bingchat);
         setContentView(R.layout.activity_main);
         this.resetPass=findViewById(R.id.reset_password);
         resetPass.setOnClickListener(v->{

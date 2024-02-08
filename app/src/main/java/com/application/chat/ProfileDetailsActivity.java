@@ -3,6 +3,8 @@ package com.application.chat;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -17,6 +19,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
 
+import com.application.chat.Dialogs.ProgressDialog;
 import com.application.chat.Models.User;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
@@ -28,15 +31,16 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
+import java.io.ByteArrayOutputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class ProfileDetailsActivity extends AppCompatActivity {
     ImageView profileImage;
     TextInputLayout inputName;
-    Bitmap imageBitmap;
     FirebaseUser fUser;
     boolean check=true;
+    Bitmap imageBitmap;
     ExecutorService exe;
     DatabaseReference userRef;
     ProgressDialog progressDialog;
@@ -50,6 +54,8 @@ public class ProfileDetailsActivity extends AppCompatActivity {
         this.progressDialog=new ProgressDialog(this);
         this.inputName=findViewById(R.id.nameInput);
         this.exe=Executors.newFixedThreadPool(2);
+        this.profileImage=findViewById(R.id.profile_pic);
+        this.profileImage.setOnClickListener(v->selectImage());
         AppCompatButton nextButton=findViewById(R.id.buttonNext);
         nextButton.setOnClickListener(view -> {
             String name= inputName.getEditText().getText().toString();
@@ -57,12 +63,24 @@ public class ProfileDetailsActivity extends AppCompatActivity {
             if(isValid(name) && check){
                 updateName(name);
                 firebaseStore();
+                Drawable drawable=profileImage.getDrawable();
+                if(drawable instanceof BitmapDrawable){
+                    Bitmap bitmap=((BitmapDrawable) drawable).getBitmap();
+                    if(bitmap!=null){
+                        Uri uri=getUri(bitmap);
+                        uploadToStorage(uri);
+                    }
+                }
                 switchActivity(new UserActivity());
             }
             progressDialog.dismiss();
         });
-        this.profileImage=findViewById(R.id.profile_pic);
-        this.profileImage.setOnClickListener(v->selectImage());
+    }
+    public Uri getUri(Bitmap bitmap){
+        ByteArrayOutputStream bytes=new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.JPEG,100,bytes);
+        String path=MediaStore.Images.Media.insertImage(this.getContentResolver(),bitmap,"Bitmap",null);
+        return Uri.parse(path);
     }
     public void updateProfilePic(Uri image){
         UserProfileChangeRequest profileChangeRequest=new UserProfileChangeRequest.Builder()
@@ -79,10 +97,10 @@ public class ProfileDetailsActivity extends AppCompatActivity {
     }
     public void updateName(String name){
         UserProfileChangeRequest profileChangeRequest=new UserProfileChangeRequest.Builder()
-                .setDisplayName(name)
                 .build();
         fUser.updateProfile(profileChangeRequest).addOnCompleteListener(task -> {
             if(task.isSuccessful()){
+                firebaseStore();
                 Toast.makeText(getApplicationContext(),"Name Updated",Toast.LENGTH_SHORT).show();
             }
         }).addOnFailureListener(e -> {
@@ -123,7 +141,6 @@ public class ProfileDetailsActivity extends AppCompatActivity {
         i.setAction(Intent.ACTION_GET_CONTENT);
         launchSomeActivity.launch(i);
     }
-
     ActivityResultLauncher<Intent> launchSomeActivity = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
@@ -131,13 +148,13 @@ public class ProfileDetailsActivity extends AppCompatActivity {
                    Intent data=result.getData();
                    if(data!=null && data.getData()!=null) {
                         Uri uri = data.getData();
-                        uploadToStorage(uri);
                        try{
                            imageBitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), uri);
+                           if(imageBitmap!=null)
+                               profileImage.setImageBitmap(imageBitmap);
                        } catch (Exception ex) {
                            ex.printStackTrace();
                        }
-                       profileImage.setImageBitmap(imageBitmap);
                    }
                }
             });

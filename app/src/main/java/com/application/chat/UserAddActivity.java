@@ -16,7 +16,6 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.application.chat.Adapters.FilterAdapter;
-import com.application.chat.CacheDb.DatabaseChatListHelper;
 import com.application.chat.Models.Friend;
 import com.application.chat.Models.User;
 import com.google.android.material.textfield.TextInputEditText;
@@ -30,7 +29,6 @@ import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -67,14 +65,17 @@ public class UserAddActivity extends AppCompatActivity implements OnAddButtonLis
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
+                String s= charSequence.toString();
+                if (s!="")
+                    searchUser(s);
+                else {
+                    filterList.clear();
+                    filterAdapter.notifyDataSetChanged();
+                }
             }
             @Override
             public void afterTextChanged(Editable editable) {
-                String s= editable.toString();
-                if (s!="") {
-                    searchUser(s);
-                }
+
             }
         });
         searchInput.setOnEditorActionListener((v,actionId,event)->{
@@ -90,17 +91,19 @@ public class UserAddActivity extends AppCompatActivity implements OnAddButtonLis
     }
     @Override
     public void onClickAddButton(int pos) {
-        //DatabaseChatListHelper cachDb=DatabaseChatListHelper.getInstance(getApplicationContext());
-        //cachDb.addToCache(filterList.get(pos).getId());
-        addToFriend(filterList.get(pos).getId());
-        Intent i=new Intent(getApplicationContext(), UserActivity.class);
-        startActivity(i);
-        finish();
+        if(pos > -1){
+            addToFriend(filterList.get(pos).getId());
+            Intent i=new Intent(getApplicationContext(), UserActivity.class);
+            startActivity(i);
+            finish();
+        }
     }
     public void addToFriend(String id){
         Friend newFriend=new Friend(id);
-        DatabaseReference dbref=FirebaseDatabase.getInstance().getReference("Friends");
-        dbref.child(fUser.getUid()).push().setValue(newFriend);
+        if ((newFriend!=null && newFriend.getFriendId()!=null)){
+            DatabaseReference dbref=FirebaseDatabase.getInstance().getReference("Friends");
+            dbref.child(fUser.getUid()).push().setValue(newFriend);
+        }
     }
     public void buildSearchBar(){
         this.searchInput=findViewById(R.id.searhBar);
@@ -115,10 +118,14 @@ public class UserAddActivity extends AppCompatActivity implements OnAddButtonLis
         query.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                for(DataSnapshot dataSnapshot:snapshot.getChildren()){
-                    User user=dataSnapshot.getValue(User.class);
-                    if(user.getId()!=null && user.getImage()!=null)
-                        filterToRecycler(user);
+                if(snapshot.hasChildren()){
+                    for(DataSnapshot dataSnapshot:snapshot.getChildren()){
+                        User user=dataSnapshot.getValue(User.class);
+                        if(user!=null && user.getId()!=null && user.getImage()!=null)
+                            filterToRecycler(user);
+                        else
+                            Log.e("searchUser()","User is null");
+                    }
                 }
             }
             @Override
