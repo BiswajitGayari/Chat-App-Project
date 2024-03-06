@@ -44,10 +44,7 @@ public class FCManager {
     }
     /*public static String getOAuthToken() {
         try {
-            FileInputStream fileInputStream=new FileInputStream("serviceAc.json");
-            FirebaseOptions firebaseOptions=new FirebaseOptions.Builder()
-                    .set
-            FirebaseApp.initializeApp(firebaseOptions);
+
         } catch (Exception e) {
             e.printStackTrace();
         }

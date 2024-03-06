@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -37,6 +38,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.application.chat.Adapters.UserAdapter;
+import com.application.chat.Dialogs.ProgressDialog;
 import com.application.chat.Models.Friend;
 import com.application.chat.Models.Message;
 import com.application.chat.Models.User;
@@ -93,8 +95,11 @@ public class UserActivity extends AppCompatActivity{
         this.recyclerView=findViewById(R.id.recyclerList);
         LinearLayoutManager layout=new LinearLayoutManager(getApplicationContext());
         recyclerView.setLayoutManager(layout);
+        userList=new ArrayList<>();
+        userAdapter=new UserAdapter(userList,this);
+        recyclerView.setAdapter(userAdapter);
         pushStatus();
-        runOnUiThread(()->loadChatList());
+        loadChatList();
         findViewById(R.id.backBtn).setOnClickListener(l->{
             userAdapter.clearSelection();
             userAdapter.setLongPress(false);
@@ -126,7 +131,8 @@ public class UserActivity extends AppCompatActivity{
                 if(squenceLengh!=0) {
                     filterTheSearchedItem(charSequence.toString());
                 }else{
-                    userAdapter.updateList(userList);
+                    if(userAdapter!=null)
+                       userAdapter.updateList(userList);
                 }
             }
 
@@ -143,7 +149,7 @@ public class UserActivity extends AppCompatActivity{
         FloatingActionButton floatAddButton=findViewById(R.id.floatAdd);
         floatAddButton.setOnClickListener(v->{
             Intent i=new Intent(getApplicationContext(), UserAddActivity.class);
-            startActivity(i);
+            startActivityForResult(i,5);
         });
         AppCompatButton logout=findViewById(R.id.logoutButton);
         logout.setOnClickListener(v -> {
@@ -196,6 +202,15 @@ public class UserActivity extends AppCompatActivity{
             }
         });
     }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode==5 && resultCode==Activity.RESULT_OK){
+
+        }
+    }
+
     public void menuBarVisibility(boolean show){
         RelativeLayout toolbar=findViewById(R.id.relativeLayout1);
         RelativeLayout menuBar=findViewById(R.id.menuBar);
@@ -212,6 +227,7 @@ public class UserActivity extends AppCompatActivity{
             toolbar.setVisibility(View.VISIBLE);
         }
     }
+    Context c=this;
     public void sureDialog(){
         MaterialAlertDialogBuilder builder=new MaterialAlertDialogBuilder(this);
         builder.setTitle("Do want to delete ?");
@@ -220,12 +236,15 @@ public class UserActivity extends AppCompatActivity{
             public void onClick(DialogInterface dialog, int which) {
                 deleteSelected();
                 menuBarVisibility(false);
+                dialog.dismiss();
+                userAdapter.clearSelection();
             }
         });
         builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
+                userAdapter.clearSelection();
             }
         });
         AlertDialog dialog=builder.create();
@@ -233,37 +252,34 @@ public class UserActivity extends AppCompatActivity{
     }
     public void deleteSelected(){
         List<Integer> items=userAdapter.getSelectedItems();
-        Collections.sort(items,Collections.reverseOrder());
-        for(int i:items){
-            if(i>=0 && i<userList.size()){
-                User user=userList.get(i);
-                userList.remove(i);
-                Query q=friendRef.orderByChild("friendId").equalTo(user.getId());
-                q.addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        for (DataSnapshot d:snapshot.getChildren()){
-                            friendRef.child(d.getKey()).removeValue().addOnCompleteListener(task -> {
-                                if (task.isSuccessful()) {
-                                    Toast.makeText(getApplicationContext(), "Successfully deleted", Toast.LENGTH_SHORT).show();
-                                }
-                                else {
-                                    Toast.makeText(getApplicationContext(), "Failed to delete", Toast.LENGTH_SHORT).show();
-                                    if(task.getException()!=null)
-                                        Log.e("deleteSelected()",task.getException().getMessage());
-                                }
-                            });
-                        }
+        for(int i=items.size()-1;i>=0;i--){
+            int pos=items.get(i);
+            User user=userList.get(pos);
+            userList.remove(pos);
+            Query q=friendRef.orderByChild("friendId").equalTo(user.getId());
+            q.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    for (DataSnapshot d:snapshot.getChildren()){
+                        friendRef.child(d.getKey()).removeValue().addOnCompleteListener(task -> {
+                            if (task.isSuccessful()) {
+                                Toast.makeText(getApplicationContext(), "Successfully deleted", Toast.LENGTH_SHORT).show();
+                            }
+                            else {
+                                Toast.makeText(getApplicationContext(), "Failed to delete", Toast.LENGTH_SHORT).show();
+                                if (task.getException() != null)
+                                    Log.e("deleteSelected()", task.getException().getMessage());
+
+                            }
+                        });
                     }
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError error) {
-                        Log.e("deleteSelected()",error.getMessage());
-                    }
-                });
-            }
+                }
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    Log.e("deleteSelected()",error.getMessage());
+                }
+            });
         }
-        userAdapter.notifyDataSetChanged();
-        userAdapter.clearSelection();
     }
     public void updateStatus(boolean isOnline,int pos){
         RecyclerView.ViewHolder viewHolder = recyclerView.findViewHolderForAdapterPosition(pos);
@@ -326,17 +342,17 @@ public class UserActivity extends AppCompatActivity{
         return false;
     }
     public void loadChatList() {
-        userList=new ArrayList<>();
         friendRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                userList.clear();
-                for (DataSnapshot data:snapshot.getChildren()){
-                    Friend friend=data.getValue(Friend.class);
-                    if(friend!=null && friend.getFriendId()!=null){
-                        queryAndAdd(friend.getFriendId());
-                    }else {
-                        Log.e("Null Friend","Not found friend");
+                if(snapshot.exists()){
+                    for (DataSnapshot data:snapshot.getChildren()){
+                        Friend friend=data.getValue(Friend.class);
+                        if(friend!=null && friend.getFriendId()!=null && !checkUser(friend.getFriendId())){
+                            queryAndAdd(friend.getFriendId());
+                        }else {
+                            Log.e("Null Friend","Not found friend");
+                        }
                     }
                 }
             }
@@ -354,7 +370,6 @@ public class UserActivity extends AppCompatActivity{
         }
         return -1;
     }
-    Context c=this;
     public void queryAndAdd(String id){
         userRef.child(id).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -362,11 +377,9 @@ public class UserActivity extends AppCompatActivity{
                 User userInfo=snapshot.getValue(User.class);
                 if(userInfo!=null && !userInfo.getId().equals(fUser.getUid())){
                     userList.add(userInfo);
-                    //userAdapter.notifyItemInserted(userList.size()-1);
-                    //recyclerView.smoothScrollToPosition(userList.size()-1);
+                    userAdapter.notifyItemInserted(userList.size()-1);
+                    recyclerView.smoothScrollToPosition(userList.size()-1);
                 }
-                userAdapter=new UserAdapter(userList,c);
-                recyclerView.setAdapter(userAdapter);
             }
             @Override
             public void onCancelled(@NonNull DatabaseError error)  {
@@ -441,10 +454,18 @@ public class UserActivity extends AppCompatActivity{
     }
     @Override
     public void onBackPressed() {
+        if(findViewById(R.id.menuBar).getVisibility()==View.VISIBLE) {
+            userAdapter.clearSelection();
+            userAdapter.setLongPress(false);
+            menuBarVisibility(false);
+            return;
+        }
         if (drawerLayout.isDrawerOpen(GravityCompat.START)){
             drawerLayout.closeDrawer(GravityCompat.START);
+            return;
         }
         super.onBackPressed();
+        finish();
     }
     public void updateToken(){
         Executors.newSingleThreadExecutor().execute(()-> {

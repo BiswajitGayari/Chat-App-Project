@@ -4,7 +4,21 @@ plugins {
     id("io.objectbox")
 }
 
-
+android{
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("C:\\dev\\keystoreapk\\mykeystore.jks")
+            storePassword = "/my1gmail.com"
+            keyAlias = "key0"
+            keyPassword = "/my1gmail.com"
+        }
+        create("release") {
+            storeFile = file("C:\\dev\\keystoreapk\\mykeystore.jks")
+            storePassword = "/my1gmail.com"
+            keyAlias = "key0"
+            keyPassword = "/my1gmail.com"
+        }
+    }
     namespace = "com.application.chat"
     compileSdk = 34
 
@@ -24,12 +38,12 @@ plugins {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         viewBinding = true

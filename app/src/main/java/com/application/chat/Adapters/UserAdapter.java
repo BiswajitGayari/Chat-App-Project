@@ -67,12 +67,7 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserHolder> {
             }
             holder.itemView.setOnClickListener(v-> {
                 if(isLongPress) {
-                    if(getItemCount()!=0)
-                       toggleSelect(position);
-                    else {
-                        UserActivity userActivity=(UserActivity) v.getContext();
-                        userActivity.menuBarVisibility(false);
-                    }
+                    toggleSelect(position,v);
                 }
                 else {
                     Intent i = new Intent(context, ConversationActivity.class);
@@ -85,17 +80,17 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserHolder> {
                 }
             });
         }
-
         holder.itemView.setOnLongClickListener(v -> {
             UserActivity userActivity=(UserActivity) v.getContext();
             userActivity.menuBarVisibility(true);
             isLongPress=true;
-            toggleSelect(position);
+            toggleSelect(position,v);
             return true;
         });
-        boolean isSelect= selecteditems.get(position,false);
+        boolean isSelect= isSelected(position);
         holder.itemView.setActivated(isSelect);
-        int color=isSelect?ContextCompat.getColor(context,R.color.menuBar):getDefaultColor();
+        setSelectionMark(isSelect,holder.itemView);
+        int color=isSelect?ContextCompat.getColor(context,R.color.menuBar):android.R.attr.colorBackground;
         holder.itemView.setBackgroundColor(color);
     }
     public boolean isSelected(int pos){
@@ -105,7 +100,6 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserHolder> {
     public void setLongPress(boolean longPress) {
         isLongPress = longPress;
     }
-
     public int getDefaultColor(){
         int color=0;
         int currTheme=context.getResources().getConfiguration().
@@ -116,29 +110,36 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserHolder> {
             color=android.R.attr.colorPrimaryDark;
         return  color;
     }
-
-    public void toggleSelect(int pos){
-        if(selecteditems.get(pos)){
+    public void toggleSelect(int pos,View v){
+        if(selecteditems.get(pos,false))
             selecteditems.delete(pos);
-        }else {
+        else
             selecteditems.put(pos,true);
-        }
         notifyItemChanged(pos);
     }
     public void clearSelection(){
         selecteditems.clear();
         notifyDataSetChanged();
     }
+    public void setSelectionMark(boolean isSelected,View v){
+        ImageView mark=v.findViewById(R.id.thickMark);
+        if(isSelected)
+            mark.setVisibility(View.VISIBLE);
+        else
+            mark.setVisibility(View.GONE);
+    }
     public int getSelectedCount(){
         return selecteditems.size();
     }
-    public List<Integer>getSelectedItems(){
-        List<Integer> items=new ArrayList<>();
-        for(int i=0;i<getItemCount();i++){
-            if(selecteditems.get(i))
-                items.add(i);
+    public List<Integer> getSelectedItems(){
+        List<Integer> list=new ArrayList<>();
+        for(int i=0;i<selecteditems.size();i++){
+            if(selecteditems.valueAt(i)){
+                int pos=selecteditems.keyAt(i);
+                list.add(pos);
+            }
         }
-        return items;
+        return list;
     }
     public int getPositionById(String target){
         for(int i=0;i<userInfoList.size();i++){
@@ -206,16 +207,25 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserHolder> {
         userInfoList=newList;
         notifyDataSetChanged();
     }
+    public void deleteItem(User user){
+        int pos=getPositionById(user.getId());
+        userInfoList.remove(pos);
+    }
 
     public static class UserHolder extends RecyclerView.ViewHolder{
         TextView onlinestatus;
         TextView name;
         ImageView profile;
+        static ImageView mark;
         public UserHolder(@NonNull View itemView) {
             super(itemView);
             onlinestatus=itemView.findViewById(R.id.status);
             name=itemView.findViewById(R.id.nameText);
             profile=itemView.findViewById(R.id.userProfile);
+            mark=itemView.findViewById(R.id.thickMark);
+        }
+        public static ImageView getMark() {
+            return mark;
         }
     }
 }

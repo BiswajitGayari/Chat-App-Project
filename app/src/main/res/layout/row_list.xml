@@ -2,7 +2,6 @@
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:orientation="horizontal"
     android:layout_width="match_parent"
     android:layout_alignParentTop="true"
@@ -10,10 +9,10 @@
     android:layout_marginTop="4dp"
     android:focusable="true"
     android:clickable="true"
-    android:background="@drawable/itemlayout"
-    android:foreground="?android:attr/selectableItemBackground"
-    tools:targetApi="honeycomb">
+    android:background="@drawable/layout_item"
+    android:foreground="?selectableItemBackgroundBorderless">
     <androidx.cardview.widget.CardView
+        android:id="@+id/cardView"
         android:layout_width="55dp"
         android:layout_height="55dp"
         app:cardCornerRadius="80dp"
@@ -29,14 +28,35 @@
             android:background="?selectableItemBackgroundBorderless"
             android:src="@drawable/default_pic" />
     </androidx.cardview.widget.CardView>
+    <ImageView
+        android:id="@+id/thickMark"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:background="@drawable/thickmark"
+        android:src="@drawable/baseline_done"
+        android:tint="@color/black"
+        android:elevation="10dp"
+        android:layout_alignEnd="@id/cardView"
+        android:layout_alignBottom="@id/cardView"
+        android:visibility="gone"/>
     <TextView
         android:id="@+id/nameText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="78dp"
-        android:layout_marginVertical="8dp"
+        android:layout_toRightOf="@id/cardView"
+        android:layout_marginStart="20dp"
+        android:layout_marginVertical="5dp"
         android:textStyle="bold"
         android:textSize="18sp"/>
+    <TextView
+        android:id="@+id/typingStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="typing..."
+        android:layout_below="@id/nameText"
+        android:layout_toRightOf="@id/cardView"
+        android:layout_marginStart="20dp"
+        android:visibility="gone"/>
     <TextView
         android:id="@+id/status"
         android:layout_width="wrap_content"

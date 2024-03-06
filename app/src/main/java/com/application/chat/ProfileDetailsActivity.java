@@ -21,6 +21,7 @@ import androidx.appcompat.widget.AppCompatButton;
 
 import com.application.chat.Dialogs.ProgressDialog;
 import com.application.chat.Models.User;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -44,6 +45,7 @@ public class ProfileDetailsActivity extends AppCompatActivity {
     ExecutorService exe;
     DatabaseReference userRef;
     ProgressDialog progressDialog;
+    int successCount=0;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
@@ -63,18 +65,24 @@ public class ProfileDetailsActivity extends AppCompatActivity {
             if(isValid(name) && check){
                 updateName(name);
                 firebaseStore();
-                Drawable drawable=profileImage.getDrawable();
-                if(drawable instanceof BitmapDrawable){
-                    Bitmap bitmap=((BitmapDrawable) drawable).getBitmap();
-                    if(bitmap!=null){
-                        Uri uri=getUri(bitmap);
-                        uploadToStorage(uri);
-                    }
+                dotask();
+                if(successCount==4){
+                    progressDialog.dismiss();
+                    switchActivity(new UserActivity());
                 }
-                switchActivity(new UserActivity());
             }
             progressDialog.dismiss();
         });
+    }
+    public void dotask(){
+        Drawable drawable=profileImage.getDrawable();
+        if(drawable instanceof BitmapDrawable){
+            Bitmap bitmap=((BitmapDrawable) drawable).getBitmap();
+            if(bitmap!=null){
+                Uri uri=getUri(bitmap);
+                uploadToStorage(uri);
+            }
+        }
     }
     public Uri getUri(Bitmap bitmap){
         ByteArrayOutputStream bytes=new ByteArrayOutputStream();
@@ -88,6 +96,7 @@ public class ProfileDetailsActivity extends AppCompatActivity {
                 .build();
         fUser.updateProfile(profileChangeRequest).addOnCompleteListener(task -> {
             if(task.isSuccessful()){
+                successCount++;
                 Toast.makeText(getApplicationContext(),"Profile Updated",Toast.LENGTH_SHORT).show();
             }
         }).addOnFailureListener(e -> {
@@ -99,6 +108,7 @@ public class ProfileDetailsActivity extends AppCompatActivity {
         UserProfileChangeRequest profileChangeRequest=new UserProfileChangeRequest.Builder()
                 .build();
         fUser.updateProfile(profileChangeRequest).addOnCompleteListener(task -> {
+            successCount++;
             if(task.isSuccessful()){
                 firebaseStore();
                 Toast.makeText(getApplicationContext(),"Name Updated",Toast.LENGTH_SHORT).show();
@@ -114,11 +124,10 @@ public class ProfileDetailsActivity extends AppCompatActivity {
         exe.execute(()-> {
             UploadTask uploadTask = imageRef.putFile(uri);
             uploadTask.addOnSuccessListener(taskSnapshot -> imageRef.getDownloadUrl().addOnSuccessListener(uriImage -> {
+                successCount++;
                 updateProfilePic(uriImage);
                 Toast.makeText(getApplicationContext(), "Image uploaded", Toast.LENGTH_SHORT).show();
-                progressDialog.dismiss();
             })).addOnFailureListener(e -> {
-                progressDialog.dismiss();
                 check = false;
                 Toast.makeText(getApplicationContext(), "Failed to upload image", Toast.LENGTH_SHORT).show();
             });
@@ -128,7 +137,12 @@ public class ProfileDetailsActivity extends AppCompatActivity {
         exe.execute(()-> {
             if(fUser !=null && fUser.getPhotoUrl()!=null && fUser.getDisplayName()!=null){
                 User userInfo = new User(fUser.getUid(), fUser.getDisplayName(), fUser.getPhotoUrl().toString(),null,false);
-                userRef.child(fUser.getUid()).setValue(userInfo);
+                userRef.child(fUser.getUid()).setValue(userInfo,(error,reference)-> {
+                    if(error==null)
+                        successCount++;
+                    else
+                        check=false;
+                });
             }
             else{
                 Log.e("Null pointer","No such firebase user");

@@ -20,11 +20,6 @@
           "type": 9
         },
         {
-          "id": "3:6602340940253475951",
-          "name": "userId",
-          "type": 9
-        },
-        {
           "id": "4:3564622177603203791",
           "name": "ringtone",
           "type": 9
@@ -41,7 +36,9 @@
   "modelVersionParserMinimum": 5,
   "retiredEntityUids": [],
   "retiredIndexUids": [],
-  "retiredPropertyUids": [],
+  "retiredPropertyUids": [
+    6602340940253475951
+  ],
   "retiredRelationUids": [],
   "version": 1
 }

@@ -52,8 +52,8 @@ public class MainActivity extends AppCompatActivity {
                 redirect(new ProfileDetailsActivity());
             }
         }
-        setTheme(R.style.Base_Theme_Bingchat);
         setContentView(R.layout.activity_main);
+        setTheme(R.style.Base_Theme_Bingchat);
         this.resetPass=findViewById(R.id.reset_password);
         resetPass.setOnClickListener(v->{
             showDialogInput();

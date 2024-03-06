@@ -37,7 +37,6 @@
             android:layout_gravity="center_vertical"
             android:layout_marginLeft="60dp"
             app:cardCornerRadius="80dp">
-
             <ImageView
                 android:id="@+id/userProfile"
                 android:layout_width="match_parent"
@@ -129,8 +128,9 @@
             android:background="@drawable/circular_send_ripple"
             android:clickable="true"
             android:focusable="true"
-            android:padding="8dp"
+            android:padding="10dp"
             android:scaleType="centerCrop"
-            android:src="@drawable/send_icon" />
+            android:src="@drawable/send_icon"
+            android:tint="@color/black"/>
     </RelativeLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

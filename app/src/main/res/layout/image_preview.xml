@@ -38,7 +38,6 @@
             android:src="@drawable/default_pic"
             android:clickable="true"
             android:focusable="true"
-            android:background="?selectableItemBackgroundBorderless"
             android:scaleType="centerCrop"/>
     </RelativeLayout>
 </RelativeLayout>

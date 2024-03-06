@@ -18,8 +18,8 @@
     </style>
 
     <style name="conversationTheme" parent="Base.Theme.Bingchat">
-        <item name="android:statusBarColor">@color/colorNavLight</item>
-        <item name="android:navigationBarColor">@color/colorNavLight</item>
+        <item name="android:statusBarColor">?android:colorBackground</item>
+        <item name="android:navigationBarColor">?android:colorBackground</item>
         <item name="android:textColor">@color/black</item>
         <item name="colorControlHighlight">@color/deemDark</item>
     </style>

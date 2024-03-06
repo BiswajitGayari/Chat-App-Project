@@ -14,7 +14,6 @@
         android:focusable="true"
         android:clickable="true"
         android:foreground="?android:attr/selectableItemBackground">
-
         <TextView
             android:id="@+id/rightMessage"
             android:layout_width="wrap_content"

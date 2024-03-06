@@ -5,6 +5,9 @@ import android.content.Intent;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.MenuInflater;
 import android.view.View;
@@ -56,23 +59,25 @@ public class ConversationActivity extends AppCompatActivity {
     ImageView sendBtn;
     RecyclerView recyclerMsg;
     MessageAdapter messageAdapter;
-    FirebaseUser fUser;
     Intent infoIntent;
     ExecutorService exe;
     List<Message> list;
     ImageView onlineDot;
-    FirebaseUser currentUser;
+    FirebaseUser fUser;
     String remoteUserId;
     //TextView lastSeen;
     DatabaseReference userRef;
     Box<UserEntity> box;
+    DatabaseReference chatRef,friendRef;
     private MediaPlayer mediaPlayer;
     @Override
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_conversation);
-        this.currentUser=FirebaseAuth.getInstance().getCurrentUser();
+        this.fUser =FirebaseAuth.getInstance().getCurrentUser();
         userRef=FirebaseDatabase.getInstance().getReference("Users");
+        chatRef=FirebaseDatabase.getInstance().getReference("Chats");
+        friendRef=FirebaseDatabase.getInstance().getReference("Friends").child(fUser.getUid());
         this.exe= Executors.newFixedThreadPool(2);
         this.username=findViewById(R.id.nameText);
         this.image=findViewById(R.id.userProfile);
@@ -91,8 +96,72 @@ public class ConversationActivity extends AppCompatActivity {
             }
             messagetext.setText("");
         });
+        messagetext.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+            @Override
+            public void afterTextChanged(Editable s) {
+                Handler handler=new Handler();
+                Runnable runnable=null;
+                handler.removeCallbacks(runnable);
+                runnable=()->{
+                    boolean isTyping=s.length()>0;
+                    setTyping(isTyping);
+                };
+                handler.postDelayed(runnable,1000);
+            }
+        });
         ImageView backbtn=findViewById(R.id.backPress);
         backbtn.setOnClickListener(v->onBackPressed());
+        chatRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if(snapshot.hasChildren()){
+                    for(DataSnapshot data:snapshot.getChildren()){
+                        boolean isSeen=data.child("seen").getValue(Boolean.class);
+                        if(isSeen){
+                            String reciver=data.child("reciver").getValue(String.class);
+                            String sender=data.child("sender").getValue(String.class);
+                            boolean isNull=reciver!=null && sender!=null?true:false;
+                            assert isNull;
+                            if(sender.equals(fUser.getUid()) && reciver.equals(remoteUserId)){
+                                int pos=getPositionById(data.getKey());
+                                messageAdapter.notifyItemChanged(pos);
+                            }else
+                                continue;
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+    }
+    public void setTyping(boolean isTyping){
+        Query q=friendRef.orderByChild("friendId").equalTo(remoteUserId);
+        q.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if(snapshot.exists() && snapshot.hasChildren()){
+                    for (DataSnapshot d: snapshot.getChildren()){
+                        friendRef.child(snapshot.getKey()).child("typing").setValue(isTyping);
+                    }
+                }
+            }
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
     }
     public void dropMenu(View view){
         PopupMenu popupMenu=new PopupMenu(this,view);
@@ -135,12 +204,12 @@ public class ConversationActivity extends AppCompatActivity {
             Message message =new Message(sender,reciver,msg,timeStamp);
             message.setSeen(false);
             message.setMesssageId(nodeId);
-            ref.child(nodeId).setValue(message, ((error, ref1) -> {
+            chatRef.child(nodeId).setValue(message, ((error, ref1) -> {
                 if(error!=null) {
                     Log.e("FirebaseInsertError",error.getMessage());
                 }
                 updateMessageCount(sender,1);
-                pushNotification(currentUser.getDisplayName(),msg,currentUser.getUid(),currentUser.getPhotoUrl().toString());
+                pushNotification(fUser.getDisplayName(),msg, fUser.getUid(), fUser.getPhotoUrl().toString());
             }));
         });
     }
@@ -166,8 +235,7 @@ public class ConversationActivity extends AppCompatActivity {
     }
     public void loadMessages(){
         list=new ArrayList<>();
-        DatabaseReference ref=FirebaseDatabase.getInstance().getReference("Chats");
-        ref.addValueEventListener(new ValueEventListener() {
+        chatRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 list.clear();
@@ -177,7 +245,7 @@ public class ConversationActivity extends AppCompatActivity {
                         if (message != null && fUser != null && message.getReciver() != null && message.getSender() != null) {
                             if (!message.isSeen() && message.getReciver().equals(fUser.getUid()) &&
                                     message.getSender().equals(remoteUserId) && getApplicationContext() instanceof ConversationActivity){
-                                ref.child(message.getMesssageId()).child("seen").setValue(true);
+                                chatRef.child(message.getMesssageId()).child("seen").setValue(true);
                                 updateMessageCount(message.getReciver(),0);
                             }
                             if (message.getReciver().equals(fUser.getUid()) && message.getSender().equals(remoteUserId) || message.

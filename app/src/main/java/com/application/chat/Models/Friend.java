@@ -2,7 +2,13 @@ package com.application.chat.Models;
 
 public class Friend {
     private String friendId;
-    int messageCount;
+    private int messageCount;
+
+    public void setMessageCount(int messageCount) {
+        this.messageCount = messageCount;
+    }
+    private boolean typing;
+
     public Friend(){}
     public Friend(String friendId) {
         this.friendId = friendId;
@@ -17,5 +23,12 @@ public class Friend {
 
     public int getMessageCount() {
         return messageCount;
+    }
+    public boolean isTyping() {
+        return typing;
+    }
+
+    public void setTyping(boolean typing) {
+        this.typing = typing;
     }
 }

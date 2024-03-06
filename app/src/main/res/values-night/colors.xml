@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="searchbarcolor">#262730</color>
+    <color name="searchbarcolor">#3b344f</color>
     <color name="textcolor">#FFFFFFFF</color>
     <color name="selectedItemColor">#27203d</color>
     <color name="menuBar">#1e1c27</color>
+    <color name="itemRiple">#585a6e</color>
+    <color name="iconColor">#00ffe5</color>
 </resources>

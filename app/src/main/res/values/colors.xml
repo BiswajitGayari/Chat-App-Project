@@ -5,7 +5,7 @@
     <color name="black">#000000</color>
     <color name="yellow">#f4c020</color>
     <color name="dark">#15141a</color>
-    <color name="searchbarcolor">#d9d2e9</color>
+    <color name="searchbarcolor">#cec4e8</color>
     <color name="deemDark">#555555</color>
     <color name="red">#cc0000</color>
     <color name="lightPink">#ead1dc</color>
@@ -20,4 +20,9 @@
     <color name="textcolor">#000000</color>
     <color name="selectedItemColor">#d5a6bd</color>
     <color name="menuBar">#d9d2e9</color>
+    <color name="itemRiple">#f4cccc</color>
+    <color name="tintIcon">#00ffe5</color>
+    <color name="sendBtn">#db84b1</color>
+    <color name="iconColor">#000000</color>
+    <color name="thickmark">#ea9999</color>
 </resources>

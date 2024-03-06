@@ -1,5 +1,6 @@
 package com.application.chat;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -41,6 +42,7 @@ public class UserAddActivity extends AppCompatActivity implements OnAddButtonLis
     TextInputEditText searchInput;
     ArrayList<User> filterList;
     FirebaseUser fUser;
+    DatabaseReference friendsDb;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
@@ -49,6 +51,7 @@ public class UserAddActivity extends AppCompatActivity implements OnAddButtonLis
         filterList=new ArrayList<>();
         this.exe=Executors.newSingleThreadExecutor();
         this.ref=FirebaseDatabase.getInstance().getReference("Users");
+        friendsDb=FirebaseDatabase.getInstance().getReference("Friends");
         fUser= FirebaseAuth.getInstance().getCurrentUser();
         buildSearchBar();
         filterAdapter=new FilterAdapter();
@@ -62,7 +65,6 @@ public class UserAddActivity extends AppCompatActivity implements OnAddButtonLis
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
 
             }
-
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 String s= charSequence.toString();
@@ -93,16 +95,16 @@ public class UserAddActivity extends AppCompatActivity implements OnAddButtonLis
     public void onClickAddButton(int pos) {
         if(pos > -1){
             addToFriend(filterList.get(pos).getId());
-            Intent i=new Intent(getApplicationContext(), UserActivity.class);
-            startActivity(i);
+            Intent i=new Intent(this, UserActivity.class);
+            i.putExtra("id",filterList.get(pos).getId());
+            setResult(Activity.RESULT_OK,i);
             finish();
         }
     }
     public void addToFriend(String id){
         Friend newFriend=new Friend(id);
         if ((newFriend!=null && newFriend.getFriendId()!=null)){
-            DatabaseReference dbref=FirebaseDatabase.getInstance().getReference("Friends");
-            dbref.child(fUser.getUid()).push().setValue(newFriend);
+            friendsDb.child(fUser.getUid()).push().setValue(newFriend);
         }
     }
     public void buildSearchBar(){
@@ -115,6 +117,7 @@ public class UserAddActivity extends AppCompatActivity implements OnAddButtonLis
         DatabaseReference ref=FirebaseDatabase.getInstance().getReference("Users");
         Query query=ref.orderByChild("name").equalTo(username);
         filterList.clear();
+        filterAdapter.notifyDataSetChanged();
         query.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
