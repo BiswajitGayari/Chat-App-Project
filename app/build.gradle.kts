@@ -7,16 +7,16 @@ plugins {
 android{
     signingConfigs {
         getByName("debug") {
-            storeFile = file("C:\\dev\\keystoreapk\\mykeystore.jks")
-            storePassword = "/my1gmail.com"
-            keyAlias = "key0"
-            keyPassword = "/my1gmail.com"
+            storeFile = file("C:\path to keystore\\mykeystore.jks")
+            storePassword = ""
+            keyAlias = "name"
+            keyPassword = "/"
         }
         create("release") {
-            storeFile = file("C:\\dev\\keystoreapk\\mykeystore.jks")
-            storePassword = "/my1gmail.com"
-            keyAlias = "key0"
-            keyPassword = "/my1gmail.com"
+            storeFile = file("C:\\path to keystore\\mykeystore.jks")
+            storePassword = ""
+            keyAlias = ""
+            keyPassword = ""
         }
     }
     namespace = "com.application.chat"
